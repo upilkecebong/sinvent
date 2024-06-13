@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('barangmasuk', function (Blueprint $table) {
             $table->id();
+            $table->date('tgl_masuk');
+            $table->smallInteger('qty_masuk')->default(1);
+            $table->foreignId('barang_id');
+            $table->foreign('barang_id')->references('id')->on('barang')->onDelete('restrict');
             $table->timestamps();
         });
     }

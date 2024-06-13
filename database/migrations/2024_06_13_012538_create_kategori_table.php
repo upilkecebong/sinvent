@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('kategori', function (Blueprint $table) {
-            $table->id();
+            $table->tinyIncrements('id');
+            $table->string('deskripsi',100)->nullable();
+            $table->enum('kategori',['M','A','BHP','BTHP'])->default('A');
             $table->timestamps();
         });
     }
