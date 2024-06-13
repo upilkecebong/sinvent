@@ -82,6 +82,13 @@ cd sinvent-ukk/
 ```bash
 chmod 775 -R storage/
 ```
+### Install Laravel Scantum
+``` bash 
+composer require laravel/sanctum
+```
+```bash
+composer update
+```
 
 ### Set environment variables:
 <p>Make sure that you already have database, database user, and its privileges</p>
