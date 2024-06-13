@@ -7,6 +7,7 @@ use Illuminate\View\View;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Session;
 
 class KategoriController extends Controller
 {
@@ -46,19 +47,35 @@ class KategoriController extends Controller
 
     public function store(Request $request)
     {
-
+        // Validate the request
         $request->validate([
-            'deskripsi'   => 'required | unique:kategori',
-            'kategori'    => 'required | in:M,A,BHP,BTHP',
+            'deskripsi' => 'required|unique:kategori',
+            'kategori'  => 'required|in:M,A,BHP,BTHP',
         ]);
 
-        // buat kategori baru
-        Kategori::create([
-            'deskripsi'  => $request->deskripsi,
-	        'kategori'   => $request->kategori,
-        ]);
-        
-        //redirect ke kategori index
+        try {
+            DB::beginTransaction(); // Start the transaction
+
+            // Insert a new category using Eloquent
+            Kategori::create([
+                'deskripsi' => $request->deskripsi,
+                'kategori'  => $request->kategori,
+                'status'    => 'pending',
+            ]);
+
+            DB::commit(); // Commit the changes
+
+            // Flash success message to the session
+            Session::flash('success', 'Kategori berhasil disimpan!');
+        } catch (\Exception $e) {
+            DB::rollBack(); // Rollback in case of an exception
+            report($e); // Report the exception
+
+            // Flash failure message to the session
+            Session::flash('gagal', 'Kategori gagal disimpan!');
+        }
+
+        // Redirect to the index route with a success message
         return redirect()->route('kategori.index')->with(['success' => 'Data Berhasil Disimpan!']);
     }
 
