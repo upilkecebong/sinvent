@@ -2,17 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Barang;
 use App\Models\BarangMasuk;
 use App\Models\BarangKeluar;
+use App\Models\Barang;
+
 use Illuminate\Http\Request;
-use DB;
 
 class BarangMasukController extends Controller
 {
+    // public function index(Request $request)
+    // {
+    //     $rsetBarangMasuk = BarangMasuk::with('barang')->latest()->paginate(10);
+    //     return view('barangmasuk.index', compact('rsetBarangMasuk'))
+    //         ->with('i', (request()->input('page', 1) - 1) * 10);
+    // }
     public function index(Request $request)
     {
-        $rsetBarangMasuk = BarangMasuk::with('barang')->latest()->paginate(10);
+        $keyword = $request->input('keyword');
+
+        // Query untuk mencari barang masuk berdasarkan keyword
+        $rsetBarangMasuk = BarangMasuk::with('barang')
+            ->whereHas('barang', function ($query) use ($keyword) {
+                $query->where('merk', 'LIKE', "%$keyword%")
+                    ->orWhere('seri', 'LIKE', "%$keyword%")
+                    ->orWhere('spesifikasi', 'LIKE', "%$keyword%");
+            })
+            ->orWhere('tgl_masuk', 'LIKE', "%$keyword%")
+            ->orWhere('qty_masuk', 'LIKE', "%$keyword%")
+            ->paginate(10);
+
         return view('barangmasuk.index', compact('rsetBarangMasuk'))
             ->with('i', (request()->input('page', 1) - 1) * 10);
     }
@@ -35,69 +53,65 @@ class BarangMasukController extends Controller
         $barang_id = $request->barang_id;
     
         // Check if there's any BarangKeluar with a date earlier than tgl_masuk
-        // $existingBarangKeluar = BarangKeluar::where('barang_id', $barang_id)
-        //     ->where('tgl_keluar', '<', $tgl_masuk)
-        //     ->exists();
+        $existingBarangKeluar = BarangKeluar::where('barang_id', $barang_id)
+            ->where('tgl_keluar', '<', $tgl_masuk)
+            ->exists();
     
-        // if ($existingBarangKeluar) {
-        //     return redirect()->back()->withInput()->withErrors(['tgl_masuk' => 'Tanggal masuk tidak boleh melebihi tanggal keluar!']);
-        // }
-
-        //Validasi jika jumlah qty_masuk berisi 0 maka muncul pesan eror
-        if ($request->qty_masuk < 1) {
-            return redirect()->back()->withInput()->withErrors(['qty_masuk' => 'Jumlah barang masuk tidak boleh 0!']);
+        if ($existingBarangKeluar) {
+            return redirect()->back()->withInput()->withErrors(['tgl_masuk' => 'Tanggal masuk tidak boleh melebihi tanggal keluar!']);
         }
-
-        //create post
+    
         BarangMasuk::create([
-            'tgl_masuk'        => $tgl_masuk,
-            'qty_masuk'        => $request->qty_masuk,
-            'barang_id'        => $barang_id,
+            'tgl_masuk'  => $tgl_masuk,
+            'qty_masuk'  => $request->qty_masuk,
+            'barang_id'  => $barang_id,
         ]);
+    
         return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Disimpan!']);
     }
 
-    public function destroy(string $id)
+
+    public function show($id)
     {
-        $rsetBarangMasuk = BarangMasuk::find($id);
-
-
-        // Delete the main record in barang table
-        $rsetBarangMasuk->delete();
-
-        // Redirect to index
-        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Barang Masuk Berhasil Dihapus!']);
+        $barangMasuk = BarangMasuk::findOrFail($id);
+        return view('barangmasuk.show', compact('barangMasuk'));
     }
 
-    public function show(string $id)
+    public function destroy($id)
     {
-        $rsetBarangMasuk = BarangMasuk::find($id);
+        $datamasuk = BarangMasuk::findOrFail($id);  
+        
+        $referencedInBarangKeluar = BarangKeluar::where('barang_id', $datamasuk->barang_id)->exists();
 
-        //return view
-        return view('barangmasuk.show', compact('rsetBarangMasuk'));
+        if ($referencedInBarangKeluar) {
+        return redirect()->route('barangmasuk.index')->with(['error' => 'Data Tidak Bisa Dihapus Karena Masih Digunakan di Tabel Barang dan Barang Keluar!']);
+        }
+
+        $datamasuk->delete();
+
+        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Dihapus!']);
+
     }
 
-    public function edit(string $id)
+    public function edit($id)
     {
-        $rsetBarangMasuk = BarangMasuk::findOrFail($id);
+        $barangMasuk = BarangMasuk::findOrFail($id);
         $abarangmasuk = Barang::all();
-        $selectedBarang = Barang::find($rsetBarangMasuk->barang_id); 
-        return view('barangmasuk.edit', compact('rsetBarangMasuk', 'abarangmasuk', 'selectedBarang'));
 
+        return view('barangmasuk.edit', compact('barangMasuk', 'abarangmasuk'));
     }
 
-    public function update(Request $request, string $id)
+    public function update(Request $request, $id)
     {
-
-        $request->validate( [
+        $request->validate([
             'tgl_masuk'     => 'required|date',
             'qty_masuk'     => 'required|numeric|min:1',
             'barang_id'     => 'required|exists:barang,id',
         ]);
-
+    
         $tgl_masuk = $request->tgl_masuk;
         $barang_id = $request->barang_id;
-
+    
         // Check if there's any BarangKeluar with a date earlier than tgl_masuk
         $existingBarangKeluar = BarangKeluar::where('barang_id', $barang_id)
             ->where('tgl_keluar', '<', $tgl_masuk)
@@ -106,22 +120,16 @@ class BarangMasukController extends Controller
         if ($existingBarangKeluar) {
             return redirect()->back()->withInput()->withErrors(['tgl_masuk' => 'Tanggal masuk tidak boleh melebihi tanggal keluar!']);
         }
-
-        //create post
-        $rsetBarangMasuk = BarangMasuk::findOrFail($id);
-            $rsetBarangMasuk->update([
-                'tgl_masuk' => $request->tgl_masuk,
-                'qty_masuk' => $request->qty_masuk,
-                'barang_id' => $barang_id,
-            ]);
-        
-        //Validasi jika jumlah qty_masuk berisi 0 atau min maka muncul pesan eror
-        if ($request->qty_masuk < 1) {
-            return redirect()->back()->withInput()->withErrors(['qty_masuk' => 'Jumlah barang masuk tidak boleh kurang dari 1!']);
-        }
-
-        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Diupdate!']);
+    
+        $barangMasuk = BarangMasuk::findOrFail($id);
+    
+        $barangMasuk->update([
+            'tgl_masuk'  => $tgl_masuk,
+            'qty_masuk'  => $request->qty_masuk,
+            'barang_id'  => $barang_id,
+        ]);
+    
+        return redirect()->route('barangmasuk.index')->with(['success' => 'Data Berhasil Diubah!']);
     }
-
 
 }

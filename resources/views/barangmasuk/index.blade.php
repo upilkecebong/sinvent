@@ -20,7 +20,7 @@
         <div class="card">
                     <div class="card-body d-flex justify-content-between align-items-center">
                         <div  class="flex-shrink-0">
-                        <a href="{{ route('barangmasuk.create') }}" class="btn btn-md btn-success my-2">TAMBAH MASUK KELUAR</a>
+                        <a href="{{ route('barangmasuk.create') }}" class="btn btn-md btn-success my-2">TAMBAH BARANG MASUK</a>
                         </div>
                         <!-- Form pencarian -->
                         <form  method="GET" action="{{ route('barangmasuk.index') }}" class="form-inline my-2 my-lg-0">
