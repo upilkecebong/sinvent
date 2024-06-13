@@ -66,6 +66,18 @@ class KategoriController extends Controller
      */
     public function destroy(Kategori $kategori)
     {
-        //
+        $kategori = Kategori::find($id);
+
+        if (!$kategori) {
+            return response()->json(['status' => 'Kategori tidak ditemukan'], 404);
+        }
+        
+        try {
+            $kategori->delete();
+            return response()->json(['status' => 'Kategori berhasil dihapus'], 200);
+        } catch (\Illuminate\Database\QueryException) {
+            // Tangkap pengecualian spesifik dari database (termasuk constraints foreign key)
+            return response()->json(['status' => 'Kategori tidak dapat dihapus'], 500);
+        }
     }
 }
