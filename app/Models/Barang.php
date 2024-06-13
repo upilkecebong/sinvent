@@ -8,4 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class Barang extends Model
 {
     use HasFactory;
+
+    protected $table = 'barang';
+    protected $fillable = ['merk','seri','spesifikasi','kategori_id'];
+
+    public function kategori()
+    {
+        return $this->belongsTo(Kategori::class, 'kategori_id');
+    }
 }
